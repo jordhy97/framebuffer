@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <string.h>
+#include <math.h>
 
 /* Initialize framebuffer and set color depth to 32bpp */
 void fb_init(Framebuffer *fb, char *device_path) {
@@ -49,7 +50,7 @@ void fb_init(Framebuffer *fb, char *device_path) {
   }
 }
 
-/* Draw a pixel with specified color to the specified point in framebuffer */
+/* Draw a pixel with specified color to the specified point in the framebuffer */
 void fb_draw_pixel(Framebuffer *fb, Point position, Color color) {
   long int address_offset;
   if (position.x >= 0 && position.x < fb->vinfo.xres && position.y >= 0 && position.y < fb->vinfo.yres) {
@@ -59,6 +60,99 @@ void fb_draw_pixel(Framebuffer *fb, Point position, Color color) {
 		fb->buffer[address_offset + 2] = color.r;
 		fb->buffer[address_offset + 3] = 0;
   }
+}
+
+/* Draw a line with specified color from the specified start and end point
+in the framebuffer */
+void fb_draw_line(Framebuffer *fb, Point start, Point end, Color color) {
+	int x, y;
+	if (start.x == end.x) {
+		x = start.x;
+		if (start.y < end.y) {
+			for (y = start.y; y <= end.y; y++) {
+				fb_draw_pixel(fb, point_create(x, y), color);
+			}
+		} else {
+			for (y = end.y; y <= start.y; y++) {
+				fb_draw_pixel(fb, point_create(x, y), color);
+			}
+		}
+	} else if (start.y == end.y) {
+		y = start.y;
+		if (start.x < end.x) {
+			for (x = start.x; x <= end.x; x++) {
+				fb_draw_pixel(fb, point_create(x, y), color);
+			}
+		} else {
+			for (x = end.x; x <= start.x; x++) {
+				fb_draw_pixel(fb, point_create(x, y), color);
+			}
+		}
+	} else if (abs(end.y - start.y) < abs(end.x - start.x)) {
+		if (start.x > end.x) {
+			fb_draw_line_low(fb, end, start, color);
+		} else {
+			fb_draw_line_low(fb, start, end, color);
+		}
+	} else {
+		if (start.y > end.y) {
+			fb_draw_line_high(fb, end, start, color);
+		} else {
+			fb_draw_line_high(fb, start, end, color);
+		}
+	}
+}
+
+/* Draw a line with specified color from the specified start and end point
+with low gradient (0 < m < 1 or -1 < m < 0) in the framebuffer using Bresenham algorithm */
+void fb_draw_line_low(Framebuffer *fb, Point start, Point end, Color color){
+	int dx, dy, p, x, y, yi;
+
+	dx = end.x - start.x;
+	dy = end.y - start.y;
+	if (dy < 0) {
+		yi = -1;
+		dy = -dy;
+	} else {
+		yi = 1;
+	}
+	p = 2 * dy - dx;
+	y = start.y;
+
+	for (x = start.x; x <= end.x; x++) {
+		fb_draw_pixel(fb, point_create(x, y), color);
+		if (p > 0) {
+			y += yi;
+			p -= (2 * dx);
+		}
+		p += (2 * dy);
+	}
+}
+
+/* Draw a line with specified color from the specified start and end point
+with steep gradient (> 1 or < -1) in the framebuffer using Bresenham algorithm */
+void fb_draw_line_high(Framebuffer *fb, Point start, Point end, Color color) {
+	int dx, dy, p, x, y, xi;
+
+	dx = end.x - start.x;
+	dy = end.y - start.y;
+	if (dx < 0) {
+		xi = -1;
+		dx = -dx;
+	} else {
+		xi = 1;
+	}
+	p = 2 * dx - dy;
+	x = start.x;
+
+	for (y = start.y; y <= end.y; y++) {
+		fb_draw_pixel(fb, point_create(x, y), color);
+		if (p > 0) {
+			x += xi;
+			p -= (2 * dy);
+		}
+		p += (2 * dx);
+	}
 }
 
 /* Clear the framebuffer */

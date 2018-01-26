@@ -74,6 +74,8 @@ int main()
     start -= 5;
     fb_display(&fb);
   }
+  // fb_draw_line(&fb, point_create(10, 1000), point_create(800, 10), COLOR_RED);
+  // fb_display(&fb);
   fb_close(&fb);
   return 0;
 }
