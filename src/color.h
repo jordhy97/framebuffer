@@ -10,6 +10,8 @@
 #define COLOR_INDIGO ((Color) {75, 0, 130})
 #define COLOR_VIOLET ((Color) {148, 0, 211})
 #define COLOR_WHITE ((Color) {255, 255, 255})
+#define COLOR_CYAN ((Color) {0, 255, 255})
+#define COLOR_SILVER ((Color) {192, 192, 192})
 
 typedef struct {
   char r;
