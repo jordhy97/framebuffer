@@ -164,8 +164,8 @@ int main()
         xoffset = i * (FONT_WIDTH + HORIZONTAL_SPACE) + ((fb.vinfo.xres - (len * (FONT_WIDTH + HORIZONTAL_SPACE) - HORIZONTAL_SPACE)) / 2);
         if (names[line][i] != ' ') {
           for (j = 0; j < alphabets[names[line][i] - 'A'].pair; j++) {
-            fb_draw_line(&fb, point_translate(point_scale_up(alphabets[names[line][i] - 'A'].points[j][0], SCALE), xoffset, yoffset),
-            point_translate(point_scale_up(alphabets[names[line][i] - 'A'].points[j][1], SCALE), xoffset, yoffset), names_color[line]);
+            fb_draw__dotted_line(&fb, point_translate(point_scale_up(alphabets[names[line][i] - 'A'].points[j][0], SCALE), xoffset, yoffset),
+            point_translate(point_scale_up(alphabets[names[line][i] - 'A'].points[j][1], SCALE), xoffset, yoffset), 3, names_color[line]);
           }
         }
       }

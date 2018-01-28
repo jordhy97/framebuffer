@@ -35,6 +35,18 @@ void fb_draw_line_low(Framebuffer *fb, Point start, Point end, Color color);
 with steep gradient (> 1 or < -1) in the framebuffer using Bresenham algorithm */
 void fb_draw_line_high(Framebuffer *fb, Point start, Point end, Color color);
 
+/* Draw a dotted line with specified color and interval from the specified
+start and end point in the framebuffer */
+void fb_draw__dotted_line(Framebuffer *fb, Point start, Point end, int interval, Color color);
+
+/* Draw a dotted line with specified color and interval from the specified start and end point
+with low gradient (0 < m < 1 or -1 < m < 0) in the framebuffer using Bresenham algorithm */
+void fb_draw_dotted_line_low(Framebuffer *fb, Point start, Point end, int interval, Color color);
+
+/* Draw a dotted line with specified color and interval from the specified start and end point
+with steep gradient (> 1 or < -1) in the framebuffer using Bresenham algorithm */
+void fb_draw_dotted_line_high(Framebuffer *fb, Point start, Point end, int interval, Color color);
+
 /* Clear the framebuffer */
 void fb_clear(Framebuffer *fb);
 

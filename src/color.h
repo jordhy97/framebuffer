@@ -22,4 +22,7 @@ typedef struct {
 /* Create a color */
 Color color_create(char r, char g, char b);
 
+/* Create a random color */
+Color color_create_random();
+
 #endif
