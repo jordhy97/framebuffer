@@ -9,4 +9,10 @@ typedef struct {
 /* Create a point */
 Point point_create(int x, int y);
 
+/* Scale up a point */
+Point point_scale_up(Point p, int scale);
+
+/* Translate a point */
+Point point_translate(Point p, int xoffset, int yoffset);
+
 #endif
