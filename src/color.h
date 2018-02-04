@@ -12,6 +12,8 @@
 #define COLOR_WHITE ((Color) {255, 255, 255})
 #define COLOR_CYAN ((Color) {0, 255, 255})
 #define COLOR_SILVER ((Color) {192, 192, 192})
+#define COLOR_BRONZE ((Color) {205, 127, 50})
+#define NO_FILL ((Color) {1, 1, 1})
 
 typedef struct {
   char r;
@@ -24,5 +26,8 @@ Color color_create(char r, char g, char b);
 
 /* Create a random color */
 Color color_create_random();
+
+/* Checks if the color_1 is color_2 */
+int color_is_color(Color color_1, Color color_2);
 
 #endif

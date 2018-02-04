@@ -21,3 +21,8 @@ Color color_create_random() {
 
   return c;
 }
+
+/* Checks if the color_1 is color_2 */
+int color_is_color(Color color_1, Color color_2) {
+  return (color_1.r == color_2.r && color_1.g == color_2.g && color_1.b == color_2.b);
+}
