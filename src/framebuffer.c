@@ -282,6 +282,172 @@ void fb_draw_dotted_line_high(Framebuffer *fb, Point start, Point end, int inter
 	}
 }
 
+// /* Draw a polygon to the framebuffer from the given polygon */
+// void fb_draw_polygon(Framebuffer *fb, Polygon polygon, Color color) {
+// 	int i;
+// 	for (i = 0; i < polygon.pair; i++) {
+// 			fb_draw_line(fb, polygon.points[i][0], polygon.points[i][1], color);
+// 	}
+// }
+
+// /* Draw a raster polygon to the framebuffer from the given polygon */
+// void fb_draw_raster_polygon(Framebuffer *fb, Polygon polygon, Color border_color, Color fill_color) {
+// 	int i, j, k, ymin, ymax, temp;
+// 	Intersections intersections;
+//
+// 	ymin = 1000000;
+// 	ymax = 0;
+// 	for (i = 0; i < polygon.pair; i++) {
+// 		if (polygon.points[i][0].y < ymin) {
+// 			ymin = polygon.points[i][0].y;
+// 		}
+// 		if (polygon.points[i][1].y < ymin) {
+// 			ymin = polygon.points[i][1].y;
+// 		}
+// 		if (polygon.points[i][0].y > ymax) {
+// 			ymax = polygon.points[i][0].y;
+// 		}
+// 		if (polygon.points[i][1].y > ymax) {
+// 			ymax = polygon.points[i][1].y;
+// 		}
+// 	}
+//
+// 	for (i = 0; i < (ymax - ymin); i++) {
+// 		intersections.neff[i] = 0;
+// 	}
+//
+// 	for (i = 0; i < polygon.pair; i++) {
+// 		fb_draw_raster_polygon_line(fb, polygon.points[i][0], polygon.points[i][1], &intersections, ymin, border_color);
+// 	}
+//
+// 	for (i = 0; i < (ymax - ymin); i++) {
+// 		for (j = 0; j < intersections.neff[i] - 1; j++) {
+// 			for (k = 0; k < intersections.neff[i] - j - 1; k++) {
+// 					if (intersections.intersections[i][k] > intersections.intersections[i][k + 1]) {
+// 						temp = intersections.intersections[i][k];
+// 						intersections.intersections[i][k] = intersections.intersections[i][k + 1];
+// 						intersections.intersections[i][k + 1] = temp;
+// 					}
+// 			}
+// 		}
+// 	}
+//
+//
+// 	for (i = 1; i < (ymax - ymin); i++) {
+// 		if (intersections.neff[i] > 1) {
+// 			for (j = 0; j < intersections.neff[i] - 1; j += 2) {
+// 				for (k = intersections.intersections[i][j] + 1; k < intersections.intersections[i][j + 1]; k++) {
+// 					fb_draw_pixel(fb, point_create(k, ymin + i), fill_color);
+// 				}
+// 			}
+// 		}
+// 	}
+//
+// 	for (i = 0; i < polygon.pair; i++) {
+// 		fb_draw_line(fb, polygon.points[i][0], polygon.points[i][1], border_color);
+// 	}
+// }
+//
+// /* Draw a raster polygon line to the framebuffer from the given start and end point */
+// void fb_draw_raster_polygon_line(Framebuffer *fb, Point start, Point end, Intersections *intersections, int ymin, Color color) {
+// 	int x, y;
+// 	if (start.x == end.x) {
+// 		x = start.x;
+// 		if (start.y < end.y) {
+// 			for (y = start.y; y <= end.y; y++) {
+// 				fb_draw_pixel(fb, point_create(x, y), color);
+// 				intersections->intersections[y - ymin][intersections->neff[y - ymin]] = x;
+// 				intersections->neff[y - ymin]++;
+// 			}
+// 		} else {
+// 			for (y = end.y; y <= start.y; y++) {
+// 				fb_draw_pixel(fb, point_create(x, y), color);
+// 				intersections->intersections[y - ymin][intersections->neff[y - ymin]] = x;
+// 				intersections->neff[y - ymin]++;
+// 			}
+// 		}
+// 	} else if (start.y == end.y) {
+// 		y = start.y;
+// 		if (start.x < end.x) {
+// 			for (x = start.x; x <= end.x; x++) {
+// 				fb_draw_pixel(fb, point_create(x, y), color);
+// 			}
+// 		} else {
+// 			for (x = end.x; x <= start.x; x++) {
+// 				fb_draw_pixel(fb, point_create(x, y), color);
+// 			}
+// 		}
+// 	} else if (abs(end.y - start.y) < abs(end.x - start.x)) {
+// 		if (start.x > end.x) {
+// 			fb_draw_raster_polygon_line_low(fb, end, start, intersections, ymin, color);
+// 		} else {
+// 			fb_draw_raster_polygon_line_low(fb, start, end, intersections, ymin, color);
+// 		}
+// 	} else {
+// 		if (start.y > end.y) {
+// 			fb_draw_raster_polygon_line_high(fb, end, start, intersections, ymin, color);
+// 		} else {
+// 			fb_draw_raster_polygon_line_high(fb, start, end, intersections, ymin, color);
+// 		}
+// 	}
+// }
+//
+// /* Draw a raster polygon line with low gradient (0 < m < 1 or -1 < m < 0)
+// to the framebuffer from the given start and end point */
+// void fb_draw_raster_polygon_line_low(Framebuffer *fb, Point start, Point end, Intersections *intersections, int ymin, Color color) {
+// 	int dx, dy, p, x, y, yi;
+//
+// 	dx = end.x - start.x;
+// 	dy = end.y - start.y;
+// 	if (dy < 0) {
+// 		yi = -1;
+// 		dy = -dy;
+// 	} else {
+// 		yi = 1;
+// 	}
+// 	p = 2 * dy - dx;
+// 	y = start.y;
+//
+// 	for (x = start.x; x <= end.x; x++) {
+// 		fb_draw_pixel(fb, point_create(x, y), color);
+// 		if (p > 0) {
+// 			intersections->intersections[y - ymin][intersections->neff[y - ymin]] = x;
+// 			intersections->neff[y - ymin]++;
+// 			y += yi;
+// 			p -= (2 * dx);
+// 		}
+// 		p += (2 * dy);
+// 	}
+// }
+//
+// /* Draw a raster polygon line with low gradient (0 < m < 1 or -1 < m < 0)
+// to the framebuffer from the given start and end point */
+// void fb_draw_raster_polygon_line_high(Framebuffer *fb, Point start, Point end, Intersections *intersections, int ymin, Color color) {
+// 	int dx, dy, p, x, y, xi;
+//
+// 	dx = end.x - start.x;
+// 	dy = end.y - start.y;
+// 	if (dx < 0) {
+// 		xi = -1;
+// 		dx = -dx;
+// 	} else {
+// 		xi = 1;
+// 	}
+// 	p = 2 * dx - dy;
+// 	x = start.x;
+//
+// 	for (y = start.y; y <= end.y; y++) {
+// 		fb_draw_pixel(fb, point_create(x, y), color);
+// 		intersections->intersections[y - ymin][intersections->neff[y - ymin]] = x;
+// 		intersections->neff[y - ymin]++;
+// 		if (p > 0) {
+// 			x += xi;
+// 			p -= (2 * dy);
+// 		}
+// 		p += (2 * dx);
+// 	}
+// }
+
 /* Clear the framebuffer */
 void fb_clear(Framebuffer *fb) {
   int x, y;

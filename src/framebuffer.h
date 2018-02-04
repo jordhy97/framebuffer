@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include "point.h"
 #include "color.h"
+#include "polygon.h"
 
 typedef struct {
   int device;
@@ -46,6 +47,23 @@ void fb_draw_dotted_line_low(Framebuffer *fb, Point start, Point end, int interv
 /* Draw a dotted line with specified color and interval from the specified start and end point
 with steep gradient (> 1 or < -1) in the framebuffer using Bresenham algorithm */
 void fb_draw_dotted_line_high(Framebuffer *fb, Point start, Point end, int interval, Color color);
+
+// /* Draw a polygon to the framebuffer from the given polygon */
+// void fb_draw_polygon(Framebuffer *fb, Polygon polygon, Color color);
+//
+// /* Draw a raster polygon to the framebuffer from the given polygon */
+// void fb_draw_raster_polygon(Framebuffer *fb, Polygon polygon, Color border_color, Color fill_color);
+//
+// /* Draw a raster polygon line to the framebuffer from the given start and end point */
+// void fb_draw_raster_polygon_line(Framebuffer *fb, Point start, Point end, Intersections *intersections, int ymin, Color color);
+//
+// /* Draw a raster polygon line with low gradient (0 < m < 1 or -1 < m < 0)
+// to the framebuffer from the given start and end point */
+// void fb_draw_raster_polygon_line_low(Framebuffer *fb, Point start, Point end, Intersections *intersections, int ymin, Color color);
+//
+// /* Draw a raster polygon line with steep gradient (> 1 or < -1)
+// to the framebuffer from the given start and end point */
+// void fb_draw_raster_polygon_line_high(Framebuffer *fb, Point start, Point end, Intersections *intersections, int ymin, Color color);
 
 /* Clear the framebuffer */
 void fb_clear(Framebuffer *fb);
