@@ -7,17 +7,17 @@
 #include <fcntl.h>
 #include <termios.h>
 
-#define FONT_HEIGHT 60
-#define FONT_WIDTH 40
+#define FONT_HEIGHT 61
+#define FONT_WIDTH 43
 #define VERTICAL_SPACE 15
-#define HORIZONTAL_SPACE 7
-#define SCALE 10
+#define HORIZONTAL_SPACE 10
+#define SCALE 3
 #define ROCKET_SCALE 25
-#define MAX_GUNFIRES 1000
+#define MAX_GUNFIRES 100
 
 typedef struct {
-  int pair;
-  Point points[15][2];
+  int neff;
+  Polygon polygons[3];
 } Alphabet;
 
 typedef struct {
@@ -59,58 +59,69 @@ void init_gunfires(int xres, int yres) {
 
 }
 
+Framebuffer fb;
+
+FILE *file;
+Alphabet alphabets[26];
+char names[9][50] = {
+  "JEMJEM",
+  "",
+  "ADITYA PRATAMA",
+  "JORDHY FERNANDO",
+  "MUHAMMAD FARHAN KEMAL",
+  "SYLVIA JULIANA",
+  "TASYA",
+  "TURFA AULIARACHMAN",
+  "VIGOR AKBAR"
+};
+Color names_color[9] = {
+  COLOR_BRONZE,
+  COLOR_BLACK,
+  COLOR_RED,
+  COLOR_ORANGE,
+  COLOR_YELLOW,
+  COLOR_GREEN,
+  COLOR_BLUE,
+  COLOR_INDIGO,
+  COLOR_VIOLET
+};
+
+int counter = -1;
+int line = 0;
+int start, i, j, k, l, xoffset, yoffset, len, x_1, y_1, x_2, y_2;
+char letter;
+
+char c='D';
+
+Gunfire gunfires[MAX_GUNFIRES];
+int gunfires_neff = 0;
+int head = 0;
+int tail = -1;
+Rocket rocket;
+
 int main()
 {
-  Framebuffer fb;
-
-  FILE *file;
-  Alphabet alphabets[26];
-  char names[7][50] = {
-    "ADITYA PRATAMA",
-    "JORDHY FERNANDO",
-    "MUHAMMAD FARHAN KEMAL",
-    "SYLVIA JULIANA",
-    "TASYA",
-    "TURFA AULIARACHMAN",
-    "VIGOR AKBAR"
-  };
-  Color names_color[7] = {
-    COLOR_RED,
-    COLOR_ORANGE,
-    COLOR_YELLOW,
-    COLOR_GREEN,
-    COLOR_BLUE,
-    COLOR_INDIGO,
-    COLOR_VIOLET
-  };
-
-  int counter = -1;
-  int line = 0;
-  int start, i, j, xoffset, yoffset, len, x1, y1, x2, y2;
-  char letter;
   struct termios old_tio, new_tio;
-
-  char c='D';
-
-  Gunfire gunfires[MAX_GUNFIRES];
-  int gunfires_neff = 0;
-  int head = 0;
-  int tail = -1;
-  Rocket rocket;
 
   fb_init(&fb, "/dev/fb0");
   init_gunfires(fb.vinfo.xres, fb.vinfo.yres);
 
   // Load font
-  file = fopen("../data/font2.txt", "r");
+  file = fopen("../data/font3.txt", "r");
   if (file) {
     while (!feof(file)) {
       fscanf(file, "\n%c ", &letter);
-      fscanf(file, "%d", &alphabets[letter - 'A'].pair);
-      for (i = 0; i < alphabets[letter - 'A'].pair; i++) {
-        fscanf(file, "%d %d %d %d", &x1, &y1, &x2, &y2);
-        alphabets[letter - 'A'].points[i][0] = point_create(x1, y1);
-        alphabets[letter - 'A'].points[i][1] = point_create(x2, y2);
+      fscanf(file, "%d", &alphabets[letter - 'A'].neff);
+      for (i = 0; i < alphabets[letter - 'A'].neff; i++) {
+        fscanf(file, "%d", &alphabets[letter - 'A'].polygons[i].neff);
+        for (j = 0; j < alphabets[letter - 'A'].polygons[i].neff; j++) {
+          fscanf(file, "%d %d", &x_1, &y_1);
+          x_1 *= SCALE;
+          y_1 *= SCALE;
+          alphabets[letter - 'A'].polygons[i].points[j] = point_create(x_1, y_1);
+        }
+        alphabets[letter - 'A'].polygons[i].height = FONT_HEIGHT;
+        alphabets[letter - 'A'].polygons[i].width = FONT_WIDTH;
       }
     }
     fclose(file);
@@ -122,9 +133,9 @@ int main()
     while (!feof(file)) {
       fscanf(file, "%d\n", &rocket.pair);
       for (i = 0; i < rocket.pair; i++) {
-        fscanf(file, "%d %d %d %d\n", &x1, &y1, &x2, &y2);
-        rocket.points[i][0] = point_translate(point_scale_up(point_create(x1, y1), ROCKET_SCALE), fb.vinfo.xres, 0);
-        rocket.points[i][1] = point_translate(point_scale_up(point_create(x2, y2), ROCKET_SCALE), fb.vinfo.xres, 0);
+        fscanf(file, "%d %d %d %d\n", &x_1, &y_1, &x_2, &y_2);
+        rocket.points[i][0] = point_translate(point_scale_up(point_create(x_1, y_1), ROCKET_SCALE), fb.vinfo.xres, 0);
+        rocket.points[i][1] = point_translate(point_scale_up(point_create(x_2, y_2), ROCKET_SCALE), fb.vinfo.xres, 0);
       }
       fscanf(file, "%d %d\n", &rocket.x_borders[0], &rocket.x_borders[1]);
       fscanf(file, "%d %d\n", &rocket.y_borders[0], &rocket.y_borders[1]);
@@ -157,19 +168,31 @@ int main()
 
   while (start >= 0) {
     fb_clear(&fb);
-    for (line = 0; line < 7; line++) {
+    for (line = 0; line < 9; line++) {
       len = strlen(names[line]);
       for (i = 0; i < len; i++) {
         yoffset = start + line * (FONT_HEIGHT + VERTICAL_SPACE);
         xoffset = i * (FONT_WIDTH + HORIZONTAL_SPACE) + ((fb.vinfo.xres - (len * (FONT_WIDTH + HORIZONTAL_SPACE) - HORIZONTAL_SPACE)) / 2);
         if (names[line][i] != ' ') {
-          for (j = 0; j < alphabets[names[line][i] - 'A'].pair; j++) {
-            fb_draw__dotted_line(&fb, point_translate(point_scale_up(alphabets[names[line][i] - 'A'].points[j][0], SCALE), xoffset, yoffset),
-            point_translate(point_scale_up(alphabets[names[line][i] - 'A'].points[j][1], SCALE), xoffset, yoffset), 3, names_color[line]);
+          for (j = 0; j < alphabets[names[line][i] - 'A'].neff; j++) {
+            if (j == 0) {
+              polygon_init(&alphabets[names[line][i] - 'A'].polygons[j], COLOR_WHITE, names_color[line]);
+            } else {
+              polygon_init(&alphabets[names[line][i] - 'A'].polygons[j], COLOR_WHITE, COLOR_BLACK);
+            }
+            for (k = 0; k < alphabets[names[line][i] - 'A'].polygons[j].height; k++) {
+              for (l = 0; l <alphabets[names[line][i] - 'A'].polygons[j].width; l++) {
+                if (!color_is_color(alphabets[names[line][i] - 'A'].polygons[j].canvas[k][l], NO_FILL)) {
+                  fb_draw_pixel(&fb, point_translate(point_create(l, k), xoffset, yoffset), alphabets[names[line][i] - 'A'].polygons[j].canvas[k][l]);
+                }
+              }
+            }
           }
         }
+
       }
     }
+
     start -= 5;
     read(STDIN_FILENO,&c,1);
      if (c == ' ') {
@@ -227,12 +250,8 @@ int main()
 
   /* Close the framebuffer */
   fb_close(&fb);
-  // for (i = head; i < head + gunfires_neff; i++) {
-  //   printf("%d\n", i);
-  // printf("%d %d\n" ,gunfires[i].start.x, gunfires[i].start.y);
-  //   printf("%d %d\n" ,gunfires[i].end.x, gunfires[i].end.y);
-  // }
-  // printf("%d %d\n", rocket.y_borders[0], rocket.y_borders[1]);
-  // printf("%d %d\n", rocket.x_borders[0], rocket.x_borders[1]);
+
+
+
   return 0;
 }
