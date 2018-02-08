@@ -36,7 +36,6 @@ void fb_init(Framebuffer *fb, char *device_path) {
 	if (ioctl(fb->device, FBIOPUT_VSCREENINFO, &fb->vinfo) == -1) {
     perror("Error: failed to write variable screen information");
     exit(4);
-
   }
 
   // Calculate screen memory size in bytes

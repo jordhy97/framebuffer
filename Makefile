@@ -14,7 +14,7 @@ all: bin
 bin: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ -lm
 
 %.o: %.c
 	$(CC) $(CFLAGS) $< -o $@
