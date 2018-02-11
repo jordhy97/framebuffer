@@ -74,4 +74,6 @@ void fb_display(Framebuffer *fb);
 /* Close the framebuffer */
 void fb_close(Framebuffer *fb);
 
+/* Get pixel color of the specified point */
+Color fb_get_pixel_color(Framebuffer *fb, Point position);
 #endif

@@ -471,7 +471,7 @@ void fb_clear(Framebuffer *fb) {
   int x, y;
   for (y = 0; y < fb->vinfo.yres; y++) {
     for (x = 0; x < fb->vinfo.xres; x++) {
-      fb_draw_pixel(fb, point_create(x, y), COLOR_BLACK);
+			fb_draw_pixel(fb, point_create(x, y), COLOR_BLACK);
     }
   }
 }
@@ -485,4 +485,19 @@ void fb_display(Framebuffer *fb) {
 void fb_close(Framebuffer *fb) {
   munmap(fb->address, fb->screen_memory_size);
   close(fb->device);
+}
+
+/* Get pixel color of the specified point */
+Color fb_get_pixel_color(Framebuffer *fb, Point position) {
+	Color color;
+	long int address_offset;
+	if (position.x >= 0 && position.x < fb->vinfo.xres && position.y >= 0 && position.y < fb->vinfo.yres) {
+		address_offset = position.x * (fb->vinfo.bits_per_pixel/8) + position.y * fb->finfo.line_length;
+		color.b = fb->buffer[address_offset];
+		color.g = fb->buffer[address_offset + 1];
+		color.r = fb->buffer[address_offset + 2];
+	} else {
+		color = NO_FILL;
+	}
+	return color;
 }
