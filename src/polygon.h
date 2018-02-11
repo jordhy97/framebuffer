@@ -2,13 +2,13 @@
 #define POLYGON_H
 
 #define MAX_NUM_OF_X 30
-#define MAX_NUM_OF_Y 1000
+#define MAX_NUM_OF_Y 10000
 
 #include "point.h"
 #include "color.h"
 
 typedef struct {
-  Point points[30];
+  Point points[40];
   int neff;
 } Polygon;
 
