@@ -1,156 +1,118 @@
 #include "framebuffer.h"
 #include "color.h"
 #include "point.h"
+#include "plane.h"
+#include "cannonball.h"
+#include "person.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <time.h>
+#include <stdlib.h>
 
-#define FONT_HEIGHT 61
-#define FONT_WIDTH 43
-#define VERTICAL_SPACE 15
-#define HORIZONTAL_SPACE 10
-#define SCALE 3
-#define ROCKET_SCALE 25
-#define MAX_GUNFIRES 100
-
-typedef struct {
-  int neff;
-  Polygon polygons[3];
-} Alphabet;
-
-typedef struct {
-  Point start;
-  Point end;
-  int x_speed;
-  int y_speed;
-} Gunfire;
-
-typedef struct {
-  int pair;
-  Point points[15][2];
-  int x_speed;
-  int y_speed;
-  int x_borders[2];
-  int y_borders[2];
-  int destroyed;
-} Rocket;
-
-Gunfire gunfire_types[3];
-
-void init_gunfires(int xres, int yres) {
-  gunfire_types[0].start = point_create(xres / 2 - 1, yres - 1);
-  gunfire_types[1].start = point_create(xres / 2 - 1, yres - 1);
-  gunfire_types[2].start = point_create(xres / 2 - 1, yres - 1);
-
-  gunfire_types[0].x_speed = 25;
-  gunfire_types[1].x_speed = 0;
-  gunfire_types[2].x_speed = -25;
-
-  gunfire_types[0].y_speed = -30;
-  gunfire_types[1].y_speed = -30;
-  gunfire_types[2].y_speed = -30;
-
-  gunfire_types[0].end = point_create(xres / 2 + 14, yres - 21);
-  gunfire_types[1].end = point_create(xres / 2 - 1, yres - 21);
-  gunfire_types[2].end = point_create(xres / 2 - 16, yres - 21);
-
-
-}
+#define MAX_CANNON_BALLS 3
+#define PERSON_SPEED -60
 
 Framebuffer fb;
+Plane plane;
+CannonBall cannon_ball_types[3];
+Person person;
 
-FILE *file;
-Alphabet alphabets[26];
-char names[9][50] = {
-  "JEMJEM",
-  "",
-  "ADITYA PRATAMA",
-  "JORDHY FERNANDO",
-  "MUHAMMAD FARHAN KEMAL",
-  "SYLVIA JULIANA",
-  "TASYA",
-  "TURFA AULIARACHMAN",
-  "VIGOR AKBAR"
-};
-Color names_color[9] = {
-  COLOR_BRONZE,
-  COLOR_BLACK,
-  COLOR_RED,
-  COLOR_ORANGE,
-  COLOR_YELLOW,
-  COLOR_GREEN,
-  COLOR_BLUE,
-  COLOR_INDIGO,
-  COLOR_VIOLET
-};
+void draw_plane() {
+  int i;
+  fb_draw_raster_polygon(&fb, &plane.body, COLOR_RED, COLOR_RED);
+  for (i = 0; i < 2; i++) {
+    fb_draw_raster_polygon(&fb, &plane.mirrors[i], COLOR_WHITE, COLOR_WHITE);
+  }
+  for (i = 0; i < 2; i++) {
+    fb_draw_raster_polygon(&fb, &plane.wings[i], COLOR_RED, COLOR_RED);
+  }
+  for (i = 0; i < 3; i++) {
+    fb_draw_raster_polygon(&fb, &plane.tails[i], COLOR_RED, COLOR_RED);
+  }
+  for (i = 0; i < 8; i++) {
+    fb_draw_raster_polygon(&fb, &plane.propellers[i], COLOR_WHITE, COLOR_WHITE);
+  }
+  for (i = 0; i < 3; i++) {
+    fb_draw_raster_polygon(&fb, &plane.wheel_connectors[i], COLOR_RED, COLOR_RED);
+  }
+  for (i = 0; i < 3; i++) {
+    fb_draw_raster_polygon(&fb, &plane.wheels[i], COLOR_WHITE, COLOR_BLACK);
+  }
+  plane_move_wheel(&plane);
+}
 
-int counter = -1;
-int line = 0;
-int start, i, j, k, l, xoffset, yoffset, len, x_1, y_1, x_2, y_2;
-char letter;
+void draw_background() {
+  int x, y;
+  for (y = 0; y < fb.vinfo.yres; y++) {
+    for (x = 0; x < fb.vinfo.xres; x++) {
+      if ((y == fb.vinfo.yres / 2 + 120|| y == fb.vinfo.yres / 2 + 121) && x % 2 == 0) {
+        fb_draw_pixel(&fb, point_create(x, y), COLOR_DARK_GREEN);
+      } else if (y > fb.vinfo.yres / 2 + 121){
+        fb_draw_pixel(&fb, point_create(x, y), COLOR_GREEN);
+      } else {
+          fb_draw_pixel(&fb, point_create(x, y), COLOR_DEEP_SKY_BLUE);
+      }
+    }
+  }
+}
 
-char c='D';
+void draw_person() {
+  int i;
 
-Gunfire gunfires[MAX_GUNFIRES];
-int gunfires_neff = 0;
-int head = 0;
-int tail = -1;
-Rocket rocket;
+  person_move(&person);
+  fb_draw_raster_polygon(&fb, &person.person, COLOR_BLACK, COLOR_BLACK);
+  if (person.y_speed > 0) {
+    fb_draw_raster_polygon(&fb, &person.parachute, COLOR_WHITE, COLOR_YELLOW);
+    for (i = 0 ; i < 4; i++) {
+      fb_draw_raster_polygon(&fb, &person.parachute_strings[i], COLOR_WHITE, COLOR_WHITE);
+    }
+  }
+}
+
+void flash() {
+  int x, y;
+  for (y = 0; y < fb.vinfo.yres; y++) {
+    for (x = 0; x < fb.vinfo.xres; x++) {
+      fb_draw_pixel(&fb, point_create(x, y), COLOR_WHITE);
+    }
+  }
+  fb_display(&fb);
+  usleep(1000/60 * 1000);
+}
 
 int main()
 {
+
+  CannonBall cannon_balls[MAX_CANNON_BALLS];
+  int cannon_balls_neff = 0;
+  int head = 0;
+  int tail = -1;
+  int counter = -1;
+  int i, j, x, y;
+  Color color;
+
+  char c='D';
   struct termios old_tio, new_tio;
 
+
+  srand(time(NULL));
   fb_init(&fb, "/dev/fb0");
-  init_gunfires(fb.vinfo.xres, fb.vinfo.yres);
 
-  // Load font
-  file = fopen("../data/font3.txt", "r");
-  if (file) {
-    while (!feof(file)) {
-      fscanf(file, "\n%c ", &letter);
-      fscanf(file, "%d", &alphabets[letter - 'A'].neff);
-      for (i = 0; i < alphabets[letter - 'A'].neff; i++) {
-        fscanf(file, "%d", &alphabets[letter - 'A'].polygons[i].neff);
-        for (j = 0; j < alphabets[letter - 'A'].polygons[i].neff; j++) {
-          fscanf(file, "%d %d", &x_1, &y_1);
-          x_1 *= SCALE;
-          y_1 *= SCALE;
-          alphabets[letter - 'A'].polygons[i].points[j] = point_create(x_1, y_1);
-        }
-        alphabets[letter - 'A'].polygons[i].height = FONT_HEIGHT;
-        alphabets[letter - 'A'].polygons[i].width = FONT_WIDTH;
-      }
-    }
-    fclose(file);
+  plane_init(&plane, "../data/plane.txt");
+  plane_set_center(&plane, point_create(fb.vinfo.xres / 2 - 1, fb.vinfo.yres / 2 - 100));
+
+  person_init(&person, "../data/person.txt", PERSON_SPEED);
+  person_set_center(&person, point_create(fb.vinfo.xres / 2 - 1, fb.vinfo.yres / 2 - 100));
+
+  cannon_ball_init(&cannon_ball_types[0], "../data/cannonball.txt", 5, -60);
+  cannon_ball_init(&cannon_ball_types[1], "../data/cannonball.txt", 0, -60);
+  cannon_ball_init(&cannon_ball_types[2], "../data/cannonball.txt", -5, -60);
+  for (i = 0; i < 3; i++) {
+    cannon_ball_set_center(&cannon_ball_types[i], point_create(fb.vinfo.xres / 2 - 1, fb.vinfo.yres - 1));
   }
-
-  // Load and init rocket
-  file = fopen("../data/rocket.txt", "r");
-  if (file) {
-    while (!feof(file)) {
-      fscanf(file, "%d\n", &rocket.pair);
-      for (i = 0; i < rocket.pair; i++) {
-        fscanf(file, "%d %d %d %d\n", &x_1, &y_1, &x_2, &y_2);
-        rocket.points[i][0] = point_translate(point_scale_up(point_create(x_1, y_1), ROCKET_SCALE), fb.vinfo.xres, 0);
-        rocket.points[i][1] = point_translate(point_scale_up(point_create(x_2, y_2), ROCKET_SCALE), fb.vinfo.xres, 0);
-      }
-      fscanf(file, "%d %d\n", &rocket.x_borders[0], &rocket.x_borders[1]);
-      fscanf(file, "%d %d\n", &rocket.y_borders[0], &rocket.y_borders[1]);
-      rocket.x_borders[0] = rocket.x_borders[0] * ROCKET_SCALE + fb.vinfo.xres;
-      rocket.x_borders[1] = rocket.x_borders[1] * ROCKET_SCALE + fb.vinfo.xres;
-      rocket.y_borders[0] = rocket.y_borders[0] * ROCKET_SCALE;
-      rocket.y_borders[1] = rocket.y_borders[1] * ROCKET_SCALE;
-      rocket.x_speed = -9;
-      rocket.y_speed = 0;
-      rocket.destroyed = -1;
-    }
-    fclose(file);
-  }
-
-  start = fb.vinfo.yres;
 
   /* get the terminal settings for stdin */
   tcgetattr(STDIN_FILENO,&old_tio);
@@ -166,82 +128,79 @@ int main()
 
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);       // make the reads non-blocking
 
-  while (start >= 0) {
-    fb_clear(&fb);
-    for (line = 0; line < 9; line++) {
-      len = strlen(names[line]);
-      for (i = 0; i < len; i++) {
-        yoffset = start + line * (FONT_HEIGHT + VERTICAL_SPACE);
-        xoffset = i * (FONT_WIDTH + HORIZONTAL_SPACE) + ((fb.vinfo.xres - (len * (FONT_WIDTH + HORIZONTAL_SPACE) - HORIZONTAL_SPACE)) / 2);
-        if (names[line][i] != ' ') {
-          for (j = 0; j < alphabets[names[line][i] - 'A'].neff; j++) {
-            if (j == 0) {
-              polygon_init(&alphabets[names[line][i] - 'A'].polygons[j], COLOR_WHITE, names_color[line]);
-            } else {
-              polygon_init(&alphabets[names[line][i] - 'A'].polygons[j], COLOR_WHITE, COLOR_BLACK);
-            }
-            for (k = 0; k < alphabets[names[line][i] - 'A'].polygons[j].height; k++) {
-              for (l = 0; l <alphabets[names[line][i] - 'A'].polygons[j].width; l++) {
-                if (!color_is_color(alphabets[names[line][i] - 'A'].polygons[j].canvas[k][l], NO_FILL)) {
-                  fb_draw_pixel(&fb, point_translate(point_create(l, k), xoffset, yoffset), alphabets[names[line][i] - 'A'].polygons[j].canvas[k][l]);
-                }
-              }
-            }
-          }
-        }
+  /* Main game loop */
+  for (i = 0; i < 249; i++) {
+    draw_background();
 
-      }
+    if (plane.hit_counter > 0) {
+      draw_person();
     }
+    draw_plane();
 
-    start -= 5;
-    read(STDIN_FILENO,&c,1);
-     if (c == ' ') {
-       tail++;
-       counter = (counter + 1) % 3;
-       gunfires[tail] = gunfire_types[counter];
-       c = 'b';
-       gunfires_neff++;
-     }
+    /* Read fire cannon ball command */
+    read(STDIN_FILENO, &c, 1);
+    if (c == ' ' && cannon_balls_neff < MAX_CANNON_BALLS) {
+      tail = (tail + 1) % MAX_CANNON_BALLS;
+      counter = (counter + 1) % 3;
+      cannon_balls[tail] = cannon_ball_types[counter];
+      c = 'D';
+      cannon_balls_neff++;
+    }
     tcflush(0, TCIFLUSH);
 
-    /* Check collision */
-    i = head;
-    while (rocket.destroyed == -1 && i < head + 3 && i < head + gunfires_neff) {
-      if ((rocket.x_borders[0] <= gunfires[i].start.x && gunfires[i].start.x <= rocket.x_borders[1] &&
-          rocket.y_borders[0] <= gunfires[i].start.y && gunfires[i].start.y <= rocket.y_borders[1]) ||
-          (rocket.x_borders[0] <= gunfires[i].end.x && gunfires[i].end.x <= rocket.x_borders[1] &&
-          rocket.y_borders[0] <= gunfires[i].end.y && gunfires[i].end.y <= rocket.y_borders[1])) {
-            rocket.destroyed = 1;
-            gunfires[i].start = point_translate(gunfires[i].start, gunfires[i].x_speed, -1000);
-            gunfires[i].end = point_translate(gunfires[i].end, gunfires[i].x_speed, -1000);
+    /* Remove destroyed cannon balls */
+    j = head;
+    while (cannon_balls[j].destroyed == 1 && cannon_balls_neff > 0) {
+      cannon_balls_neff--;
+      head = (head + 1) % MAX_CANNON_BALLS;
+      j = head;
+    }
+
+    /* Draw cannon balls */
+    for (j = head; j < head + cannon_balls_neff; j++) {
+      if (cannon_balls[j % MAX_CANNON_BALLS].destroyed == 0) {
+        fb_draw_raster_polygon(&fb, &cannon_balls[j % MAX_CANNON_BALLS].body, COLOR_GRAY, COLOR_GRAY);
+      }
+    }
+
+    /* Check cannon balls collision */
+    for (j = head; j < head + cannon_balls_neff; j++) {
+      y = cannon_balls[j % MAX_CANNON_BALLS].y_min;
+      while(cannon_balls[j % MAX_CANNON_BALLS].destroyed == 0 && y < cannon_balls[j % MAX_CANNON_BALLS].y_max) {
+        x = cannon_balls[j % MAX_CANNON_BALLS].x_min;
+        while (cannon_balls[j % MAX_CANNON_BALLS].destroyed == 0 && x < cannon_balls[j % MAX_CANNON_BALLS].x_max) {
+          color = fb_get_pixel_color(&fb, point_create(x, y));
+          if (color_is_color(color, COLOR_RED) || color_is_color(color, COLOR_WHITE)) {
+            cannon_balls[j % MAX_CANNON_BALLS].destroyed = 1;
+            plane.hit_counter++;
+            if (plane.hit_counter > 3) {
+              plane.hit_counter = 3;
+            }
+          } else {
+            x++;
           }
-      i++;
-    }
-
-    /* Draw rocket */
-    if (rocket.destroyed == -1) {
-      for (i = 0; i < rocket.pair; i++) {
-        fb_draw_line(&fb, rocket.points[i][0], rocket.points[i][1], COLOR_CYAN);
-        rocket.points[i][0] = point_translate(rocket.points[i][0], rocket.x_speed, 0);
-        rocket.points[i][1] = point_translate(rocket.points[i][1], rocket.x_speed, 0);
+        }
+        y++;
       }
-      rocket.x_borders[0] += rocket.x_speed;
-      rocket.x_borders[1] += rocket.x_speed;
+      cannon_ball_move(&cannon_balls[j % MAX_CANNON_BALLS]);
     }
 
-    /* Draw gunfires */
-    for (i = head; i < head + gunfires_neff; i++) {
-      fb_draw_line(&fb, gunfires[i].start, gunfires[i].end, COLOR_SILVER);
-      gunfires[i].start = point_translate(gunfires[i].start, gunfires[i].x_speed, gunfires[i].y_speed);
-      gunfires[i].end = point_translate(gunfires[i].end, gunfires[i].x_speed, gunfires[i].y_speed);
-      if (gunfires[i].start.y < 0) {
-        head = (head + 1) % MAX_GUNFIRES;
-        gunfires_neff--;
+    if ((i + 1) % 50 == 0) {
+      plane_scale(&plane, 2);
+      if (plane.hit_counter == 0) {
+        person_scale(&person, 2);
       }
     }
 
+    plane_rotate_propellers(&plane);
+
+    usleep(1000 /60 * 1000);
     fb_display(&fb);
   }
+
+  flash();
+  fb_clear(&fb);
+  fb_display(&fb);
 
   tcflush(0, TCIFLUSH);
 
@@ -250,8 +209,6 @@ int main()
 
   /* Close the framebuffer */
   fb_close(&fb);
-
-
 
   return 0;
 }
